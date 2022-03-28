@@ -9,17 +9,28 @@ CONF_ALT = Path('/etc/cron-apt/action-available.d/5-install.alt')
 
 doc_url = 'www.turnkeylinux.org/docs/auto-secupdates#issue-res'
 
-info_default = """
-This is the historic and default TurnKey cronapt behaviour. Only packages \
+info_old_default = """
+This is the historic default TurnKey cronapt behaviour. Only packages \
 from the repos listed in security.sources.list will be installed. \
 Missing dependencies will not be installed and will cause package removal. \
 This package removal may cause one or more services to fail."""
 
 info_alternate = """
-This is a new option which is similar to the default. However, it will not \
-allow removal of packages. This will maximise uptime of all services, but \
-conversely, may also allow services with unpatched security vulnerabilities \
-to continue running."""
+This is a new (in v16.x) option which is similar to the default. However, it \
+will not allow removal of packages. This will maximise uptime of all \
+services, but conversely, may also allow services with unpatched security \
+vulnerabilities to continue running."""
+
+info_new_default = """
+This is a new (in v17.x) default option which is somewhat similar to the \
+"alternate" option. However, it will install dependencies (that may not be \
+in "security"). This is the new (as of v17.0) default."""
+
+info_all_official = """
+This is a new (for v17.X) option which will install all available Debian \
+and TurnKey updates by default (only from sources.list and \
+security-sources.list files). It will will install all available updates."""
+
 
 
 def new_link(link_path: Path, target_path: Path) -> None:
