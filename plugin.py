@@ -52,7 +52,7 @@ class EventManager(object):
         for handler in self._handlers[event]:
             try:
                 handler()  # handler passed no arguments; can change if needed
-            except:
+            except:  # TODO don't use bare except!
                 sys.stderr.write('An Exception has occured within an event'
                                  ' handler whilst attempting to handle event'
                                  f' "{event}"\n(format_exc())')
@@ -71,7 +71,8 @@ class Plugin(object):
         # used for imp.find_module
         self.module_name = os.path.splitext(self.real_name)[0]
 
-        spec = importlib.util.spec_from_file_location(self.module_name, self.path)
+        spec = importlib.util.spec_from_file_location(self.module_name,
+                                                      self.path)
         self.module = importlib.util.module_from_spec(spec)
 
         for k in module_globals:
@@ -102,7 +103,7 @@ class PluginDir(object):
     def __init__(self, path, module_globals):
         self.path = path
         self.real_name = os.path.basename(path)
-        self.name = re.sub('^[\d]*', '', self.real_name).replace('_', ' ')
+        self.name = re.sub(r'^[\d]*', '', self.real_name).replace('_', ' ')
 
         self.module_name = self.name
 

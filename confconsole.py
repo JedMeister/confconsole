@@ -99,7 +99,8 @@ class Console:
             except DialogError as e:
                 if "Can't make new window" in e.message:
                     self.console.msgbox(
-                        "Terminal too small for UI, resize terminal and press OK",
+                        "Terminal too small for UI, resize terminal and press"
+                        " OK",
                         ok_label='OK'
                     )
                     continue
@@ -221,11 +222,12 @@ class TurnkeyConsole:
         # handle bridged LXC where br0 is the default outward-facing interface
         defifname = conf.Conf().default_nic
         if defifname and defifname.startswith('br'):
-                ifnames.append(defifname)
-                bridgedif = subprocess.check_output(
-                        ['brctl', 'show', defifname],
-                        text=True).split('\n')[1].split('\t')[-1]
-                ifnames.remove(bridgedif)
+            ifnames.append(defifname)
+            bridgedif = subprocess.check_output(
+                    ['brctl', 'show', defifname],
+                    text=True
+                    ).split('\n')[1].split('\t')[-1]
+            ifnames.remove(bridgedif)
 
         ifnames.sort()
         return ifnames
@@ -583,9 +585,11 @@ class TurnkeyConsole:
                 err = "\n".join(err)
             else:
                 in_ssh = 'SSH_CONNECTION' in os.environ
-                if not in_ssh or (in_ssh and self.console.yesno(
-                        "Warning: Changing ip while an ssh session is active will"
-                        " drop said ssh session!", autosize=True) == self.OK):
+                if not in_ssh or (
+                    in_ssh and self.console.yesno(
+                        "Warning: Changing ip while an ssh session is active"
+                        " will drop said ssh session!", autosize=True
+                        ) == self.OK):
                     err = ifutil.set_static(self.ifname, addr, netmask,
                                             gateway, nameservers)
                     if not err:
