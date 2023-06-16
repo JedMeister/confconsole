@@ -1,5 +1,5 @@
 '''Reconfigure TZdata '''
-import os
+import subprocess
 
 
 def run():
@@ -13,4 +13,4 @@ def run():
 
         flag = '-f noninteractive'
 
-    os.system('dpkg-reconfigure %s tzdata 2> /dev/null' % flag)
+    subprocess.run(['dpkg-reconfigure', flag, 'tzdata'])

@@ -47,7 +47,7 @@ class IP(int):
 
         else:
             if not is_legal_ip(arg):
-                raise Error("illegal ip (%s)" % arg)
+                raise Error(f"illegal ip ({arg})")
 
             return int.__new__(cls, _str2int(arg))
 
@@ -55,7 +55,7 @@ class IP(int):
         return _int2str(self)
 
     def __repr__(self):
-        return "IP(%r)" % str(self)
+        return f"IP({str(self)})"
 
     def _numeric_method(method):
         def f(self, other):
@@ -88,9 +88,9 @@ class IPRange:
         return self.network < IP(ip) < self.broadcast
 
     def __repr__(self):
-        return "IPRange('%s', '%s')" % (self.ip, self.netmask)
+        return f"IPRange('{self.ip}', '{self.netmask}')"
 
     def fmt_cidr(self):
-        return "%s/%d" % (self.ip, self.cidr)
+        return f"{self.ip}/{self.cidr}"
 
     __str__ = fmt_cidr
