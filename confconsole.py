@@ -48,7 +48,7 @@ def usage(e=None):
     if e:
         print("Error:", e, file=sys.stderr)
 
-    print("Syntax: %s" % sys.argv[0], file=sys.stderr)
+    print(f"Syntax: {sys.argv[0]}", file=sys.stderr)
     print(__doc__.strip(), file=sys.stderr)
     sys.exit(1)
 
@@ -194,7 +194,7 @@ class TurnkeyConsole:
         self.height = 20
 
         self.console = Console(title, self.width, self.height)
-        self.appname = "TurnKey GNU/Linux %s" % netinfo.get_hostname().upper()
+        self.appname = f"TurnKey GNU/Linux {netinfo.get_hostname().upper()}"
 
         self.installer = Installer(path='/usr/bin/di-live')
 
@@ -297,7 +297,7 @@ class TurnkeyConsole:
             if addr:
                 desc = addr
                 if ifmethod:
-                    desc += " (%s)" % ifmethod
+                    desc += f" ({ifmethod})"
 
                 if ifname == self._get_default_nic():
                     desc += " [*]"
@@ -325,14 +325,14 @@ class TurnkeyConsole:
         if addr is None:
             return "Network adapter is not configured\n"
 
-        text = "IP Address:      %s\n" % addr
-        text += "Netmask:         %s\n" % netmask
-        text += "Default Gateway: %s\n" % gateway
-        text += "Name Server(s):  %s\n\n" % " ".join(nameservers)
+        text = f"IP Address:      {addr}\n"
+        text += f"Netmask:         {netmask}\n"
+        text += f"Default Gateway: {gateway}\n"
+        text += f"Name Server(s):  {' '.join(nameservers)}\n\n"
 
         ifmethod = ifutil.get_ifmethod(ifname)
         if ifmethod:
-            text += "Networking configuration method: %s\n" % ifmethod
+            text += f"Networking configuration method: {ifmethod}\n"
 
         if len(self._get_filtered_ifnames()) > 1:
             text += "Is this adapter's IP address displayed in Usage: "
@@ -396,12 +396,12 @@ class TurnkeyConsole:
             t = ""
         text = Template(t).substitute(ipaddr=ip_addr)
 
-        text += "\n\n%s\n\n" % tklbam_status
+        text += f"\n\n{tklbam_status}\n\n"
         text += "\n" * (self.height - len(text.splitlines()) - 7)
         text += "         TurnKey Backups and Cloud Deployment\n"
         text += "             https://hub.turnkeylinux.org"
 
-        retcode = self.console.msgbox("%s appliance services" % hostname,
+        retcode = self.console.msgbox(f"{hostname} appliance services",
                                       text,
                                       button_label=default_button_label)
 
@@ -458,7 +458,7 @@ class TurnkeyConsole:
         return "ifconf"
 
     def ifconf(self):
-        retcode, choice = self.console.menu("%s configuration" % self.ifname,
+        retcode, choice = self.console.menu("{self.ifname} configuration",
                                             self._get_ifconftext(self.ifname),
                                             self._get_ifconfmenu(self.ifname))
 
@@ -480,16 +480,16 @@ class TurnkeyConsole:
             if not addr:
                 errors.append("No IP address provided")
             elif not ipaddr.is_legal_ip(addr):
-                errors.append("Invalid IP address: %s" % addr)
+                errors.append(f"Invalid IP address: {addr}")
 
             if not netmask:
                 errors.append("No netmask provided")
             elif not ipaddr.is_legal_ip(netmask):
-                errors.append("Invalid netmask: %s" % netmask)
+                errors.append(f"Invalid netmask: {netmask}")
 
             for nameserver in nameservers:
                 if nameserver and not ipaddr.is_legal_ip(nameserver):
-                    errors.append("Invalid nameserver: %s" % nameserver)
+                    errors.append(f"Invalid nameserver: {nameserver}")
 
             if len(nameservers) != len(set(nameservers)):
                 errors.append("Duplicate nameservers specified")
@@ -499,19 +499,21 @@ class TurnkeyConsole:
 
             if gateway:
                 if not ipaddr.is_legal_ip(gateway):
-                    return ["Invalid gateway: %s" % gateway]
+                    return [f"Invalid gateway: {gateway}"]
                 else:
                     iprange = ipaddr.IPRange(addr, netmask)
                     if gateway not in iprange:
-                        return ["Gateway (%s) not in IP range (%s)"
-                                "" % (gateway, iprange)]
+                        return [f"Gateway ({gateway}) not in IP range"
+                                f" ({iprange})"]
             return []
 
         warnings = []
         try:
-            addr, netmask, gateway, nameservers = ifutil.get_ipconf(self.ifname, True)
+            addr, netmask, gateway, nameservers \
+                    = ifutil.get_ipconf(self.ifname, True)
         except CalledProcessError:
-            warnings.append('`route -n` returned non-0 exit code! (unable to get gateway)')
+            warnings.append(
+                '`route -n` failed - unable to get gateway')
             addr, netmask, gateway, nameservers = None, None, '', []
         except netinfo.NetInfoError:
             warnings.append('failed to find default gateway!')
@@ -555,7 +557,7 @@ class TurnkeyConsole:
                                field_width, field_limit))
 
             fields = format_fields(fields)
-            text = "Static IP configuration (%s)" % self.ifname
+            text = f"Static IP configuration ({self.ifname})"
             retcode, input = self.console.form("Network settings",
                                                text, fields)
 
@@ -600,7 +602,7 @@ class TurnkeyConsole:
         if not in_ssh or (in_ssh and self.console.yesno(
                 "Warning: Changing ip while an ssh session is active will"
                 " drop said ssh session!", autosize=True) == self.OK):
-            self.console.infobox("Requesting DHCP for %s..." % self.ifname)
+            self.console.infobox(f"Requesting DHCP for {self.ifname}...")
             err = ifutil.set_dhcp(self.ifname)
             if err:
                 self.console.msgbox("Error", err)
@@ -622,10 +624,10 @@ class TurnkeyConsole:
     def _shutdown(self, text, opt):
         if self.console.yesno(text) == self.OK:
             self.running = False
-            cmd = "shutdown %s now" % opt
+            cmd = f"shutdown {opt} now"
             fgvt = os.environ.get("FGVT")
             if fgvt:
-                cmd = "chvt %s; " % fgvt + cmd
+                cmd = f"chvt {fgvt + cmd}; "
             os.system(cmd)
 
         return "advanced"
@@ -718,7 +720,7 @@ def main():
                     pm.getByName(plugin_name))
 
         if len(ps) > 1:
-            fatal('plugin name ambiguous, matches all of %s' % ps)
+            fatal(f'plugin name ambiguous, matches all of {ps}')
         elif len(ps) == 1:
             p = ps[0]
 
