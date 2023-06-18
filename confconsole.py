@@ -14,21 +14,20 @@ import os
 import sys
 import dialog
 from dialog import DialogError
-import ipaddr
 from string import Template
 
-import ifutil
-import netinfo
 import getopt
-
-import conf
-
 from io import StringIO
 import traceback
 import subprocess
-from subprocess import PIPE, CalledProcessError
 import shlex
+from typing import NoReturn, Optional, Callable
 
+import netinfo
+
+import conf
+import ifutil
+import ipaddr
 import plugin
 
 PLUGIN_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -39,12 +38,12 @@ class Error(Exception):
     pass
 
 
-def fatal(e):
+def fatal(e: str) -> NoReturn:
     print("error:", e, file=sys.stderr)
     sys.exit(1)
 
 
-def usage(e=None):
+def usage(e: str = None) -> NoReturn:
     if e:
         print("Error:", e, file=sys.stderr)
 
@@ -53,7 +52,8 @@ def usage(e=None):
     sys.exit(1)
 
 
-def format_fields(fields):
+def format_fields(fields: list[tuple[str, int, int, int]]
+                  ) -> list[tuple[str, int, int, int, int, int, int, int]]:
     '''Takes fields in format (label, field, label_length, field_length) and
     outputs fields in format (label, ly, lx, item, iy, ix, field_length,
     input_length)
@@ -65,7 +65,7 @@ def format_fields(fields):
 
 
 class Console:
-    def __init__(self, title=None, width=60, height=20):
+    def __init__(self, title: str = None, width: int = 60, height: int = 20):
         self.width = width
         self.height = height
 
@@ -79,7 +79,7 @@ class Console:
         if title:
             self.console.add_persistent_args(["--backtitle", title])
 
-    def _handle_exitcode(self, retcode):
+    def _handle_exitcode(self, retcode: str) -> bool:
         if retcode == 'esc':
             text = "Do you really want to quit?"
             if self.console.yesno(text) == 0:
@@ -87,7 +87,8 @@ class Console:
             return False
         return True
 
-    def _wrapper(self, dialog, text, *args, **kws):
+    def _wrapper(self, dialog: str, text: str, *args, **kws
+                 ) -> tuple[str, str]:
         try:
             method = getattr(self.console, dialog)
         except AttributeError:
@@ -117,10 +118,11 @@ class Console:
 
         return ret
 
-    def infobox(self, text):
+    def infobox(self, text: str) -> tuple[str, str]:
         return self._wrapper("infobox", text)
 
-    def yesno(self, text, autosize=False):
+    def yesno(self, text: str, autosize: bool = False
+              ) -> tuple[str, str]:
         if autosize:
             text += '\n '
             height, width = 0, 0
@@ -128,7 +130,9 @@ class Console:
             height, width = 10, 30
         return self._wrapper("yesno", text, height, width)
 
-    def msgbox(self, title, text, button_label="ok", autosize=False):
+    def msgbox(self, title: str, text: str, button_label: str = "ok",
+               autosize: bool = False
+               ) -> tuple[str, str]:
         if autosize:
             text += '\n '
             height, width = 0, 0
@@ -138,20 +142,25 @@ class Console:
         return self._wrapper("msgbox", text, height, width,
                              title=title, ok_label=button_label)
 
-    def inputbox(self, title, text, init='', ok_label="OK",
-                 cancel_label="Cancel"):
+    def inputbox(self, title: str, text: str, init: str = '',
+                 ok_label: str = "OK", cancel_label: str = "Cancel"
+                 ) -> tuple[str, str]:
         no_cancel = True if cancel_label == "" else False
         return self._wrapper("inputbox", text, self.height, self.width,
                              title=title, init=init, ok_label=ok_label,
                              cancel_label=cancel_label, no_cancel=no_cancel)
 
-    def menu(self, title, text, choices, no_cancel=False):
+    def menu(self, title: str, text: str, choices: list[tuple[str, str]],
+             no_cancel: bool = False
+             ) -> tuple[str, str]:
         return self._wrapper("menu", text, self.height, self.width,
                              menu_height=len(choices)+1,
                              title=title, choices=choices, no_cancel=no_cancel)
 
-    def form(self, title, text, fields, ok_label="Apply",
-             cancel_label="Cancel", autosize=False):
+    def form(self, title: str, text: str, fields: list[str],
+             ok_label: str = "Apply", cancel_label: str = "Cancel",
+             autosize: bool = False
+             ) -> tuple[str, str]:
         if autosize:
             text += '\n '
             height, width = 0, 0
@@ -165,11 +174,11 @@ class Console:
 
 
 class Installer:
-    def __init__(self, path):
+    def __init__(self, path: str):
         self.path = path
         self.available = self._is_available()
 
-    def _is_available(self):
+    def _is_available(self) -> bool:
         if not os.path.exists(self.path):
             return False
 
@@ -178,7 +187,7 @@ class Installer:
 
         return False
 
-    def execute(self):
+    def execute(self) -> None:
         if not self.available:
             raise Error("installer is not available to be executed")
 
@@ -189,7 +198,8 @@ class TurnkeyConsole:
     OK = 'ok'
     CANCEL = 1
 
-    def __init__(self, pluginManager, eventManager, advanced_enabled=True):
+    def __init__(self, pluginManager: plugin.PluginManager,
+                 eventManager: str, advanced_enabled: bool = True):
         title = "TurnKey GNU/Linux Configuration Console"
         self.width = 60
         self.height = 20
@@ -211,7 +221,7 @@ class TurnkeyConsole:
         self.pluginManager.updateGlobals({'console': self.console})
 
     @staticmethod
-    def _get_filtered_ifnames():
+    def _get_filtered_ifnames() -> list[str]:
         ifnames = []
         for ifname in netinfo.get_ifnames():
             if ifname.startswith(('lo', 'tap', 'br', 'natbr', 'tun',
@@ -233,7 +243,7 @@ class TurnkeyConsole:
         return ifnames
 
     @classmethod
-    def _get_default_nic(cls):
+    def _get_default_nic(cls) -> Optional[str]:
         def _validip(ifname):
             ip = ifutil.get_ipconf(ifname)[0]
             if ip and not ip.startswith('169'):
@@ -251,18 +261,17 @@ class TurnkeyConsole:
         return None
 
     @classmethod
-    def _get_public_ipaddr(cls):
+    def _get_public_ipaddr(cls) -> Optional[str]:
         publicip_cmd = conf.Conf().publicip_cmd
         if publicip_cmd:
             command = subprocess.run(shlex.split(publicip_cmd),
-                                     stdout=PIPE,
-                                     encoding='utf-8')
+                                     capture_output=True, text=True)
             if command.returncode == 0:
                 return command.stdout.strip()
 
         return None
 
-    def _get_advmenu(self):
+    def _get_advmenu(self) -> tuple[list[tuple[str, str]], dict[str, str]]:
         items = []
         if conf.Conf().networking:
             items.append(("Networking", "Configure appliance networking"))
@@ -290,14 +299,14 @@ class TurnkeyConsole:
 
         return items, plugin_map
 
-    def _get_netmenu(self):
+    def _get_netmenu(self) -> list[tuple[str, str]]:
         menu = []
         for ifname in self._get_filtered_ifnames():
             addr = ifutil.get_ipconf(ifname)[0]
             ifmethod = ifutil.get_ifmethod(ifname)
 
             if addr:
-                desc = addr
+                desc = str(addr)
                 if ifmethod:
                     desc += f" ({ifmethod})"
 
@@ -310,7 +319,7 @@ class TurnkeyConsole:
 
         return menu
 
-    def _get_ifconfmenu(self, ifname):
+    def _get_ifconfmenu(self, ifname: str) -> list[tuple[str, str]]:
         menu = []
         menu.append(("DHCP", "Configure networking automatically"))
         menu.append(("StaticIP", "Configure networking manually"))
@@ -322,7 +331,7 @@ class TurnkeyConsole:
 
         return menu
 
-    def _get_ifconftext(self, ifname):
+    def _get_ifconftext(self, ifname: str) -> str:
         addr, netmask, gateway, nameservers = ifutil.get_ipconf(ifname)
         if addr is None:
             return "Network adapter is not configured\n"
@@ -345,7 +354,7 @@ class TurnkeyConsole:
 
         return text
 
-    def usage(self):
+    def usage(self) -> str:
         if self.advanced_enabled:
             default_button_label = "Advanced Menu"
             default_return_value = "advanced"
@@ -374,12 +383,12 @@ class TurnkeyConsole:
 
         # tklbam integration
         tklbamstatus_cmd = subprocess.run(['which', 'tklbam-status'],
-                                          stdout=PIPE,
-                                          encoding='utf-8').stdout.strip()
+                                          capture_output=True,
+                                          text=True).stdout.strip()
         if tklbamstatus_cmd:
             tklbam_status = subprocess.run([tklbamstatus_cmd, "--short"],
-                                           stdout=PIPE,
-                                           encoding='utf-8').stdout
+                                           capture_output=True,
+                                           text=True).stdout
         else:
             tklbam_status = ("TKLBAM not found - please check that it's"
                              " installed.")
@@ -412,7 +421,7 @@ class TurnkeyConsole:
 
         return default_return_value
 
-    def advanced(self):
+    def advanced(self) -> str:
         # dont display cancel button when no interfaces at all
         no_cancel = False
         if len(self._get_filtered_ifnames()) == 0:
@@ -433,7 +442,7 @@ class TurnkeyConsole:
 
         return "_adv_" + choice.lower()
 
-    def networking(self):
+    def networking(self) -> str:
         ifnames = self._get_filtered_ifnames()
 
         # if no interfaces at all - display error and go to advanced
@@ -459,7 +468,7 @@ class TurnkeyConsole:
 
         return "ifconf"
 
-    def ifconf(self):
+    def ifconf(self) -> str:
         retcode, choice = self.console.menu("{self.ifname} configuration",
                                             self._get_ifconftext(self.ifname),
                                             self._get_ifconfmenu(self.ifname))
@@ -473,8 +482,10 @@ class TurnkeyConsole:
 
         return "_ifconf_" + choice.lower()
 
-    def _ifconf_staticip(self):
-        def _validate(addr, netmask, gateway, nameservers):
+    def _ifconf_staticip(self) -> str:
+        def _validate(addr: ipaddr.IP, netmask: ipaddr.IP, gateway: ipaddr.IP,
+                      nameservers: list[ipaddr.IP]
+                      ) -> list[str]:
             """Validate Static IP form parameters. Returns an empty array on
                success, an array of strings describing errors otherwise"""
 
@@ -513,7 +524,7 @@ class TurnkeyConsole:
         try:
             addr, netmask, gateway, nameservers \
                     = ifutil.get_ipconf(self.ifname, True)
-        except CalledProcessError:
+        except subprocess.CalledProcessError:
             warnings.append(
                 '`route -n` failed - unable to get gateway')
             addr, netmask, gateway, nameservers = None, None, '', []
@@ -601,7 +612,7 @@ class TurnkeyConsole:
 
         return "ifconf"
 
-    def _ifconf_dhcp(self):
+    def _ifconf_dhcp(self) -> str:
         in_ssh = 'SSH_CONNECTION' in os.environ
         if not in_ssh or (in_ssh and self.console.yesno(
                 "Warning: Changing ip while an ssh session is active will"
@@ -613,11 +624,11 @@ class TurnkeyConsole:
 
         return "ifconf"
 
-    def _ifconf_default(self):
+    def _ifconf_default(self) -> str:
         conf.Conf().set_default_nic(self.ifname)
         return "ifconf"
 
-    def _adv_install(self):
+    def _adv_install(self) -> str:
         text = "Please note that any changes you may have made to the\n"
         text += "live system will *not* be installed to the hard disk.\n\n"
         self.console.msgbox("Installer", text)
@@ -625,7 +636,7 @@ class TurnkeyConsole:
         self.installer.execute()
         return "advanced"
 
-    def _shutdown(self, text, opt):
+    def _shutdown(self, text: str, opt: str) -> str:
         if self.console.yesno(text) == self.OK:
             self.running = False
             cmd = f"shutdown {opt} now"
@@ -636,7 +647,7 @@ class TurnkeyConsole:
 
         return "advanced"
 
-    def _adv_reboot(self):
+    def _adv_reboot(self) -> str:
         return self._shutdown("Reboot the appliance?", "-r")
 
     def _adv_shutdown(self):
@@ -656,7 +667,7 @@ class TurnkeyConsole:
     _adv_networking = networking
     quit = _adv_quit
 
-    def loop(self, dialog="usage"):
+    def loop(self, dialog: str = "usage") -> None:
         self.running = True
         prev_dialog = dialog
         standalone = dialog != 'usage'  # no "back" for plugins
