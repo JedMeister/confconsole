@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # Copyright (c) 2008 Alon Swartz <alon@turnkeylinux.org> - all rights reserved
+# Copyright (c) 2009-2026 TurnKey GNU/Linux <admin@turnkeylinux.org>
 """TurnKey Configuration Console
 
 Options:
@@ -430,10 +431,13 @@ class TurnkeyConsole:
 
         return menu
 
-    def _get_ifconfmenu(self, ifname: str) -> list[tuple[str, str]]:
+    def _get_if4confmenu(self, ifname: str) -> list[tuple[str, str]]:
         menu = []
-        menu.append(("DHCP", "Configure networking automatically"))
-        menu.append(("StaticIP", "Configure networking manually"))
+        menu.append(("DHCP", "Configure networking automatically (IPv4)"))
+        menu.append(("StaticIP", "Configure networking manually (IPv4)"))
+        menu.append(("IPv6", "IPv6 configuration"))
+        menu.append(("DHCP6", "Configure networking automatically (IPv6)"))
+        menu.append(("StaticIPv6", "Configure networking manually (IPv6)"))
 
         if (
             not ifname == self._get_default_nic()
@@ -455,7 +459,8 @@ class TurnkeyConsole:
             f"ip: {addr} netmask: {netmask} gateway: {gateway}"
             f" nameservers: {nameserver_str}",
         )
-        text = f"IP Address:      {addr}\n"
+        text = f"IPv4 Address:      {addr}\n"
+        text = f"IPv6 Address:      {addr6}\n"
         text += f"Netmask:         {netmask}\n"
         text += f"Default Gateway: {gateway}\n"
         text += f"Name Server(s):  {nameserver_str}\n"
